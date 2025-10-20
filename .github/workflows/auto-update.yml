@@ -1,40 +1,42 @@
 name: 豆瓣海报自动更新
 
-# 触发条件：每小时自动运行 + 手动触发
+# 新增：添加权限配置，解决git操作权限不足
+permissions:
+  contents: write  # 允许读写仓库内容
+  pages: write     # 允许部署GitHub Pages
+  id-token: write  # 用于身份验证
+
 on:
   schedule:
-    - cron: '0 * * * *'  # UTC每小时0分执行（北京时间每小时8分）
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
   crawl-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 步骤1：拉取仓库代码
       - name: 拉取代码
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false  # 禁用默认凭据，使用新权限
 
-      # 步骤2：配置Python环境
       - name: 配置Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           cache: 'pip'
 
-      # 步骤3：安装依赖
       - name: 安装依赖库
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 步骤4：运行爬虫（读取Secrets中的链接和Cookie）
       - name: 爬取豆瓣海报
         env:
           DOUBAN_COLLECT_URL: ${{ secrets.DOUBAN_COLLECT_URL }}
           DOUBAN_COOKIE: ${{ secrets.DOUBAN_COOKIE }}
         run: python douban_spider.py
 
-      # 步骤5：部署到GitHub Pages
       - name: 部署到GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -42,3 +44,5 @@ jobs:
           publish_dir: ./
           publish_branch: gh-pages
           force_orphan: true
+          # 新增：明确权限
+          enable_jekyll: false
